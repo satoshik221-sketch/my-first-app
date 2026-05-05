@@ -3,19 +3,80 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Hello World</title>
+  <title>宮廷魔術師の均衡術</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1 id="message">Hello git</h1>
-  <button type="button" id="change-message">変更</button>
+  <main class="app">
+    <section id="title-screen" class="screen active">
+      <div class="title-panel">
+        <p class="eyebrow">Dark Court Simulation</p>
+        <h1>宮廷魔術師の均衡術</h1>
+        <p class="lead">
+          教会・王権・民衆の支持を崩さず、金貨、魔力、名声を積み上げよ。
+          疑惑が満ちれば、宮廷の灯は消える。
+        </p>
+        <div class="best-score">最高スコア: <span id="title-best-score">0</span></div>
+        <button id="start-button" class="primary-button">ゲーム開始</button>
+      </div>
+    </section>
 
-  <script>
-    const message = document.getElementById('message');
-    const button = document.getElementById('change-message');
+    <section id="game-screen" class="screen">
+      <header class="game-header">
+        <div>
+          <p class="eyebrow">Court Ledger</p>
+          <h2>宮廷魔術師の均衡術</h2>
+        </div>
+        <div class="turn-box">
+          <span>ターン <strong id="turn-display">1 / 10</strong></span>
+          <span>行動 <strong id="actions-display">2 / 2</strong></span>
+        </div>
+      </header>
 
-    button.addEventListener('click', () => {
-      message.textContent = 'こんにちは';
-    });
-  </script>
+      <section class="board">
+        <div class="panel gauges-panel">
+          <h3>三勢力</h3>
+          <div id="support-gauges" class="gauges"></div>
+        </div>
+
+        <div class="panel stats-panel">
+          <h3>資産と影</h3>
+          <div id="stats-grid" class="stats-grid"></div>
+        </div>
+
+        <div class="panel actions-panel">
+          <h3>行動</h3>
+          <div id="actions-list" class="actions-list"></div>
+        </div>
+
+        <div class="panel event-panel">
+          <h3>出来事</h3>
+          <div id="event-display" class="event-display">今は静かだ。</div>
+        </div>
+
+        <div class="panel log-panel">
+          <h3>行動ログ</h3>
+          <ol id="log-list" class="log-list"></ol>
+        </div>
+      </section>
+    </section>
+
+    <section id="result-screen" class="screen">
+      <div class="result-panel">
+        <p class="eyebrow">Final Judgment</p>
+        <h2 id="ending-title">結果</h2>
+        <p id="defeat-reason" class="defeat-reason"></p>
+        <div class="score-line">スコア: <strong id="final-score">0</strong></div>
+        <div id="new-best" class="new-best hidden">最高スコアを更新</div>
+        <div id="final-stats" class="final-stats"></div>
+        <div class="result-buttons">
+          <button id="retry-button" class="primary-button">もう一度遊ぶ</button>
+          <button id="back-title-button" class="secondary-button">タイトルへ戻る</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
 </body>
 </html>

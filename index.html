@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hello World</title>
+</head>
+<body>
+  <h1 id="message">Hello World</h1>
+  <button type="button" id="change-message">変更</button>
+
+  <script>
+    const message = document.getElementById('message');
+    const button = document.getElementById('change-message');
+
+    button.addEventListener('click', () => {
+      message.textContent = 'こんにちは';
+    });
+  </script>
+</body>
+</html>

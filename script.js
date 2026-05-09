@@ -1,6 +1,9 @@
 const STORAGE_KEY = "courtMageBalanceBestScore";
 const MAX_TURNS = 10;
 const ACTIONS_PER_TURN = 2;
+const EVENT_RATE = 0.4;
+
+const SUPPORT_KEYS = ["church", "crown", "people"];
 
 const initialState = {
   turn: 1,
@@ -8,10 +11,8 @@ const initialState = {
   church: 50,
   crown: 50,
   people: 50,
-  gold: 20,
-  magic: 12,
-  fame: 0,
-  suspicion: 10,
+  magic: 3,
+  gold: 0,
   logs: [],
   lastEvent: "今は静かだ。",
   gameOver: false,
@@ -24,56 +25,144 @@ const statLabels = {
   church: "教会支持",
   crown: "王権支持",
   people: "民衆支持",
-  gold: "金貨",
   magic: "魔力",
-  fame: "名声",
-  suspicion: "疑惑"
+  gold: "金貨"
 };
 
 const actions = [
   {
-    id: "donate",
-    name: "教会に寄進",
-    balances: ["church"],
-    effects: { church: 14, crown: -3, people: -2, gold: -6, suspicion: -4 },
-    cost: { gold: 6 }
+    id: "churchWork",
+    name: "教会工作",
+    magicCost: 0,
+    effect: {
+      church: [11, 17],
+      crown: [-2, 0],
+      people: [-2, 0],
+      gold: [3, 6]
+    }
   },
   {
-    id: "serveKing",
-    name: "王に仕える",
-    balances: ["crown"],
-    effects: { crown: 14, church: -3, people: -4, gold: 9, suspicion: 4 },
-    cost: {}
+    id: "crownWork",
+    name: "王権工作",
+    magicCost: 0,
+    effect: {
+      crown: [11, 17],
+      church: [-2, 0],
+      people: [-2, 0],
+      gold: [3, 6]
+    }
   },
   {
-    id: "savePeople",
-    name: "民衆を救う",
-    balances: ["people"],
-    effects: { people: 14, church: 2, crown: -5, gold: -4, magic: -3, fame: 6 },
-    cost: { gold: 4, magic: 3 }
+    id: "peopleWork",
+    name: "民衆工作",
+    magicCost: 0,
+    effect: {
+      people: [11, 17],
+      church: [-2, 0],
+      crown: [-2, 0],
+      gold: [3, 6]
+    }
   },
   {
-    id: "courtMagic",
-    name: "宮廷魔術を披露",
-    balances: ["church", "crown", "people"],
-    effects: { church: 3, crown: 3, people: 3, gold: 6, magic: -2, fame: 3, suspicion: 4 },
-    cost: { magic: 2 }
+    id: "magicChurchWork",
+    name: "魔力：教会工作",
+    magicCost: 3,
+    effect: {
+      magic: [-3, -3],
+      church: [22, 32],
+      crown: [-3, 1],
+      people: [-3, 1],
+      gold: [6, 12]
+    }
   },
   {
-    id: "forbiddenStudy",
-    name: "禁術研究",
-    balances: [],
-    effects: { magic: 14, church: -8, suspicion: 9, gold: -4 },
-    cost: { gold: 4 }
+    id: "magicCrownWork",
+    name: "魔力：王権工作",
+    magicCost: 3,
+    effect: {
+      magic: [-3, -3],
+      crown: [22, 32],
+      church: [-3, 1],
+      people: [-3, 1],
+      gold: [6, 12]
+    }
+  },
+  {
+    id: "magicPeopleWork",
+    name: "魔力：民衆工作",
+    magicCost: 3,
+    effect: {
+      magic: [-3, -3],
+      people: [22, 32],
+      church: [-3, 1],
+      crown: [-3, 1],
+      gold: [6, 12]
+    }
+  },
+  {
+    id: "magicResearch",
+    name: "魔術研究",
+    magicCost: 0,
+    effect: {
+      magic: [5, 8],
+      gold: [0, 2]
+    }
+  },
+  {
+    id: "fundraising",
+    name: "金策",
+    magicCost: 0,
+    effect: {
+      gold: [12, 20],
+      church: [-1, 0],
+      crown: [-1, 0],
+      people: [-1, 0]
+    }
   }
 ];
 
 const events = [
-  { name: "疫病の噂", text: "疫病の噂が広まり、民の不安が魔術師へ向いた。", effects: { people: -6, suspicion: 3 } },
-  { name: "王の増税", text: "王の増税により国庫は潤ったが、民衆は疲弊した。", effects: { crown: 5, people: -8, gold: 6 } },
-  { name: "異端告発", text: "異端告発の声が礼拝堂から上がった。", effects: { church: -8, suspicion: 8 } },
-  { name: "豊作", text: "豊作により市場は満ち、民の顔に明るさが戻った。", effects: { people: 6, gold: 5 } },
-  { name: "宮廷の陰謀", text: "宮廷の陰謀が巡り、王の信頼にひびが入った。", effects: { crown: -6, fame: -3, suspicion: 4 } }
+  {
+    name: "疫病の噂",
+    text: "疫病の噂が広まり、民衆が動揺した。",
+    effect: {
+      people: [-10, -6],
+      church: [0, 4]
+    }
+  },
+  {
+    name: "王の増税",
+    text: "王の増税により国庫は潤ったが、民衆は疲弊した。",
+    effect: {
+      crown: [3, 8],
+      people: [-12, -8],
+      gold: [4, 8]
+    }
+  },
+  {
+    name: "司教の介入",
+    text: "司教が宮廷に口を挟み、王権との緊張が高まった。",
+    effect: {
+      church: [5, 10],
+      crown: [-6, -2]
+    }
+  },
+  {
+    name: "豊作",
+    text: "豊作により民衆は落ち着き、市場にも金が巡った。",
+    effect: {
+      people: [5, 10],
+      gold: [3, 8]
+    }
+  },
+  {
+    name: "宮廷の陰謀",
+    text: "宮廷の陰謀が巡り、王権の威信に傷がついた。",
+    effect: {
+      crown: [-10, -6],
+      church: [-2, 2]
+    }
+  }
 ];
 
 let state = { ...initialState };
@@ -91,7 +180,7 @@ document.getElementById("back-title-button").addEventListener("click", showTitle
 function startGame() {
   state = {
     ...initialState,
-    logs: ["宮廷の帳簿が開かれた。均衡を保て。"]
+    logs: ["宮廷の帳簿が開かれた。三勢力の均衡を保て。"]
   };
   showScreen("game");
   render();
@@ -149,27 +238,21 @@ function renderSupports() {
 }
 
 function renderStats() {
-  const stats = ["gold", "magic", "fame", "suspicion"];
-  document.getElementById("stats-grid").innerHTML = stats.map((key) => {
-    const warning = key === "suspicion" && state.suspicion >= 75 ? " warning" : "";
-    return `
-      <div class="stat${warning}">
-        <span>${statLabels[key]}</span>
-        <strong>${state[key]}</strong>
-      </div>
-    `;
-  }).join("");
+  document.getElementById("stats-grid").innerHTML = ["magic", "gold"].map((key) => `
+    <div class="stat">
+      <span>${statLabels[key]}</span>
+      <strong>${state[key]}</strong>
+    </div>
+  `).join("");
 }
 
 function renderActions() {
-  const bestKeys = getLowestSupports();
   document.getElementById("actions-list").innerHTML = actions.map((action) => {
-    const affordable = canAfford(action);
-    const isBest = action.balances.some((key) => bestKeys.includes(key));
+    const usable = canUseAction(action);
     return `
-      <button class="action-button ${isBest ? "best" : ""} ${affordable ? "" : "unaffordable"}" data-action="${action.id}">
+      <button class="action-button ${usable ? "" : "unaffordable"}" data-action="${action.id}">
         <strong>${action.name}</strong>
-        <span>${formatEffects(action.effects)}${isBest ? " / 最善手候補" : ""}${affordable ? "" : " / 資源不足"}</span>
+        <span>${formatEffectRanges(action.effect)}${usable ? "" : " / 魔力不足"}</span>
       </button>
     `;
   }).join("");
@@ -196,21 +279,16 @@ function performAction(actionId) {
   const action = actions.find((item) => item.id === actionId);
   if (!action) return;
 
-  if (!canAfford(action)) {
-    addLog(`${action.name}は資源不足で実行できない。`);
+  if (!canUseAction(action)) {
+    addLog(`${action.name}: 魔力が足りません。`);
     render();
     return;
   }
 
-  const bestKeys = getLowestSupports();
-  const isBest = action.balances.some((key) => bestKeys.includes(key));
-  const result = rollResult(isBest);
-  const adjustedEffects = adjustEffects(action.effects, result.multiplier);
-
-  applyEffects(adjustedEffects);
+  const applied = applyEffect(action.effect);
   state.actionsLeft -= 1;
+  addLog(`${action.name}: ${formatEffects(applied)}`);
 
-  addLog(`${action.name}: ${result.label}${isBest ? "、最善手" : ""}。${formatEffects(adjustedEffects)}`);
   checkGameOver();
 
   if (!state.gameOver && state.actionsLeft <= 0) {
@@ -220,54 +298,14 @@ function performAction(actionId) {
   render();
 }
 
-function canAfford(action) {
-  return Object.entries(action.cost).every(([key, amount]) => state[key] >= amount);
-}
-
-function getLowestSupports() {
-  const values = { church: state.church, crown: state.crown, people: state.people };
-  const min = Math.min(...Object.values(values));
-  return Object.entries(values).filter(([, value]) => value === min).map(([key]) => key);
-}
-
-function rollResult(isBest) {
-  const roll = Math.random();
-  const table = isBest
-    ? [{ limit: 0.10, label: "失敗", multiplier: 0.5 }, { limit: 0.75, label: "成功", multiplier: 1 }, { limit: 1, label: "大成功", multiplier: 1.5 }]
-    : [{ limit: 0.25, label: "失敗", multiplier: 0.5 }, { limit: 0.85, label: "成功", multiplier: 1 }, { limit: 1, label: "大成功", multiplier: 1.5 }];
-
-  return table.find((entry) => roll < entry.limit);
-}
-
-function adjustEffects(effects, multiplier) {
-  return Object.fromEntries(Object.entries(effects).map(([key, value]) => {
-    const adjusted = value > 0 ? Math.round(value * multiplier) : value;
-    return [key, adjusted];
-  }));
-}
-
-function applyEffects(effects) {
-  Object.entries(effects).forEach(([key, value]) => {
-    state[key] += value;
-  });
-  normalizeState();
-}
-
-function normalizeState() {
-  ["church", "crown", "people", "suspicion"].forEach((key) => {
-    state[key] = clamp(state[key], 0, 100);
-  });
-  ["gold", "magic", "fame"].forEach((key) => {
-    state[key] = Math.max(0, state[key]);
-  });
+function canUseAction(action) {
+  return state.magic >= action.magicCost;
 }
 
 function endTurn() {
-  addLog(`ターン${state.turn}終了。自然変動が発生。`);
-  applyEffects({ church: -4, crown: -4, people: -4, suspicion: 4, magic: 2 });
+  addLog(`ターン${state.turn}終了。三勢力の支持が低下。`);
+  applyFixedEffect({ church: -4, crown: -4, people: -4 });
 
-  applyBalanceBonus();
-  applyImbalancePenalty();
   maybeTriggerEvent();
   checkGameOver();
 
@@ -285,68 +323,70 @@ function endTurn() {
   state.actionsLeft = ACTIONS_PER_TURN;
 }
 
-function applyBalanceBonus() {
-  const minSupport = Math.min(state.church, state.crown, state.people);
-  const effects = {};
-
-  if (minSupport >= 60) addToEffects(effects, { gold: 5, fame: 3 });
-  if (minSupport >= 75) addToEffects(effects, { gold: 8, fame: 4, suspicion: -3 });
-  if (minSupport >= 90) addToEffects(effects, { gold: 15, fame: 8, suspicion: -6 });
-
-  if (Object.keys(effects).length) {
-    applyEffects(effects);
-    addLog(`均衡ボーナス: ${formatEffects(effects)}`);
-  }
-}
-
-function applyImbalancePenalty() {
-  const supports = [state.church, state.crown, state.people];
-  const gap = Math.max(...supports) - Math.min(...supports);
-  const effects = {};
-
-  if (gap >= 35) addToEffects(effects, { suspicion: 8 });
-  if (gap >= 50) addToEffects(effects, { suspicion: 15, fame: -5 });
-
-  if (Object.keys(effects).length) {
-    applyEffects(effects);
-    addLog(`偏りペナルティ: ${formatEffects(effects)}`);
-  }
-}
-
 function maybeTriggerEvent() {
-  if (Math.random() >= 0.4) {
+  if (Math.random() >= EVENT_RATE) {
     state.lastEvent = "このターン、目立った出来事はなかった。";
     return;
   }
 
-  const event = events[Math.floor(Math.random() * events.length)];
-  applyEffects(event.effects);
+  const event = events[randInt(0, events.length - 1)];
+  const applied = applyEffect(event.effect);
   state.lastEvent = `${event.name}: ${event.text}`;
-  addLog(`ランダムイベント: ${event.name}。${formatEffects(event.effects)}`);
+  addLog(`ランダムイベント: ${event.name}。${formatEffects(applied)}`);
+}
+
+function applyEffect(effect) {
+  const applied = {};
+
+  Object.entries(effect).forEach(([key, range]) => {
+    const value = randInt(range[0], range[1]);
+    state[key] += value;
+    applied[key] = value;
+  });
+
+  normalizeState();
+  return applied;
+}
+
+function applyFixedEffect(effect) {
+  Object.entries(effect).forEach(([key, value]) => {
+    state[key] += value;
+  });
+  normalizeState();
+}
+
+function normalizeState() {
+  SUPPORT_KEYS.forEach((key) => {
+    state[key] = clamp(state[key], 0, 100);
+  });
+  state.magic = Math.max(0, state.magic);
+  state.gold = Math.max(0, state.gold);
 }
 
 function checkGameOver() {
-  const reasons = [
-    [state.church <= 0, "異端審問"],
-    [state.crown <= 0, "追放"],
-    [state.people <= 0, "暴動"],
-    [state.suspicion >= 100, "魔女裁判"],
-    [state.gold < 0, "破産"]
-  ];
+  const reason = getDefeatReason();
 
-  const failed = reasons.find(([condition]) => condition);
-  if (failed) {
+  if (reason) {
     state.gameOver = true;
-    state.defeatReason = failed[1];
-    addLog(`ゲームオーバー: ${state.defeatReason}`);
+    state.defeatReason = reason;
+    addLog(`ゲームオーバー: ${reason}`);
     finishGame();
   }
+}
+
+function getDefeatReason() {
+  if (state.church <= 0) return "異端審問";
+  if (state.crown <= 0) return "追放";
+  if (state.people <= 0) return "暴動";
+  return "";
 }
 
 function finishGame() {
   state.gameOver = true;
   state.score = calculateScore();
   state.ending = state.defeatReason ? "敗北" : getEnding();
+  addLog(`最終結果: ${state.ending}、スコア${state.score}`);
+
   const best = getBestScore();
   const isNewBest = state.score > best;
 
@@ -358,7 +398,7 @@ function finishGame() {
   document.getElementById("defeat-reason").textContent = state.defeatReason ? `敗北理由: ${state.defeatReason}` : "10ターンを生き延びた。";
   document.getElementById("final-score").textContent = state.score;
   document.getElementById("new-best").classList.toggle("hidden", !isNewBest);
-  document.getElementById("final-stats").innerHTML = ["church", "crown", "people", "gold", "magic", "fame", "suspicion"].map((key) => `
+  document.getElementById("final-stats").innerHTML = ["church", "crown", "people", "magic", "gold"].map((key) => `
     <div class="stat">
       <span>${statLabels[key]}</span>
       <strong>${state[key]}</strong>
@@ -369,37 +409,30 @@ function finishGame() {
 }
 
 function getEnding() {
-  const supports = [state.church, state.crown, state.people];
-  const minSupport = Math.min(...supports);
+  const all55 = state.church >= 55 && state.crown >= 55 && state.people >= 55;
+  const all65 = state.church >= 65 && state.crown >= 65 && state.people >= 65;
+  const all75 = state.church >= 75 && state.crown >= 75 && state.people >= 75;
 
-  if (minSupport >= 95 && state.gold >= 120 && state.fame >= 50 && state.suspicion < 45) return "完全勝利";
-  if (minSupport >= 80 && state.gold >= 80 && state.suspicion < 65) return "大成功";
-  if (minSupport >= 60 && state.suspicion < 80) return "良好";
+  if (all75 && state.gold >= 180) return "完全勝利";
+  if (all65 && state.gold >= 140) return "大成功";
+  if (all55) return "良好";
   return "生存";
 }
 
 function calculateScore() {
-  const supports = [state.church, state.crown, state.people];
-  const minSupport = Math.min(...supports);
-  const averageSupport = supports.reduce((sum, value) => sum + value, 0) / supports.length;
+  const minSupport = Math.min(state.church, state.crown, state.people);
+  const averageSupport = (state.church + state.crown + state.people) / 3;
+
   return Math.round(
-    state.gold * 3 +
-    state.fame * 2 +
-    state.magic +
-    minSupport * 8 +
-    averageSupport * 2 -
-    state.suspicion * 3
+    state.gold * 5 +
+    minSupport * 10 +
+    averageSupport * 3 +
+    state.magic * 2
   );
 }
 
 function getBestScore() {
   return Number(localStorage.getItem(STORAGE_KEY) || 0);
-}
-
-function addToEffects(target, source) {
-  Object.entries(source).forEach(([key, value]) => {
-    target[key] = (target[key] || 0) + value;
-  });
 }
 
 function addLog(message) {
@@ -412,6 +445,24 @@ function formatEffects(effects) {
     const sign = value > 0 ? "+" : "";
     return `${statLabels[key]}${sign}${value}`;
   }).join(" / ");
+}
+
+function formatEffectRanges(effect) {
+  return Object.entries(effect).map(([key, range]) => {
+    const [min, max] = range;
+    const signMin = min > 0 ? "+" : "";
+    const signMax = max > 0 ? "+" : "";
+
+    if (min === max) {
+      return `${statLabels[key]}${signMin}${min}`;
+    }
+
+    return `${statLabels[key]}${signMin}${min}〜${signMax}${max}`;
+  }).join(" / ");
+}
+
+function randInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 function clamp(value, min, max) {
